@@ -1,7 +1,7 @@
 # Privacy Policy for Screen Bugs: Insects
 
-**Effective Date**: [Current Date]  
-**Last Updated**: [Current Date]
+**Effective Date**: 10-11-2025  
+**Last Updated**: 10-11-2025
 
 ---
 
@@ -99,12 +99,6 @@ We explicitly **DO NOT** collect:
 
 We integrate the following third-party services:
 
-### Google AdMob
-- **Purpose**: Display advertisements
-- **Data Collected**: Device identifiers, ad interaction data, basic device info
-- **Privacy Policy**: https://policies.google.com/privacy
-- **Opt-Out**: You can customize ad settings via Google Ad Settings
-
 ### Flutter Framework
 - **Purpose**: App development framework
 - **Data Collected**: Crash reports (anonymous)
@@ -186,9 +180,9 @@ We may update this Privacy Policy periodically to reflect:
 
 If you have questions, concerns, or requests regarding this Privacy Policy or your data:
 
-**Email**: [Your Support Email]  
+**Email**: developersoap@gmail.com  
 **Response Time**: Within 48 hours  
-**Address**: [Your Business Address, if applicable]
+**Address**: Philippines
 
 ---
 
@@ -220,7 +214,7 @@ If you are in the EU/EEA, you have the right to:
 - Data portability
 - Object to processing
 
-To exercise these rights, contact us at [Your Support Email].
+To exercise these rights, contact us at developersoap@gmail.com.
 
 ---
 
@@ -231,8 +225,8 @@ By installing and using Screen Bugs: Insects, you acknowledge that you have read
 ---
 
 **Screen Bugs: Insects**  
-[Your Developer Name]  
-[Current Date]
+BoredJejemonPh
+10-11-2025
 
 ---
 
