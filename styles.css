@@ -1154,3 +1154,83 @@ html {
         padding: 0.6rem;
     }
 }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Arial, sans-serif;
+  background: #f7f7fb;
+  color: #111;
+}
+
+main {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 0 16px;
+}
+
+/* Overlay layer for GIF bugs */
+#overlay-root{
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;   /* default pass-through; each bug can enable clicks */
+  z-index: 2147483647;    /* stay on top */
+}
+
+/* GIF bugs */
+.gif-bug{
+  position: fixed;
+  will-change: transform;
+  width: min(14vw, 120px);
+  height: auto;
+  opacity: 0.98;
+  /* Strong layered shadow for depth */
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,.35)) drop-shadow(0 2px 6px rgba(0,0,0,.2));
+  transform: translate3d(-9999px,-9999px,0);
+  image-rendering: -webkit-optimize-contrast;
+  user-select: none;
+
+  /* Allow clicking to squash */
+  pointer-events: auto;
+  cursor: pointer;
+
+  /* Let squash reuse latest pose cleanly */
+  transform-origin: center;
+}
+
+@media (max-width: 768px){
+  .gif-bug{
+    width: min(22vw, 110px);
+  }
+}
+
+/* Squash animation */
+.gif-bug.squashing{
+  animation: gif-squash .28s ease forwards;
+}
+
+@keyframes gif-squash{
+  0% {
+    transform: translate3d(var(--nx,0px), var(--ny,0px), 0) rotate(var(--ang,0rad)) scale(1) skew(0deg,0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translate3d(var(--nx,0px), var(--ny,0px), 0) rotate(var(--ang,0rad)) scale(1.15,.35) skew(-6deg,2deg);
+    opacity: .9;
+  }
+  100% {
+    transform: translate3d(var(--nx,0px), var(--ny,0px), 0) rotate(var(--ang,0rad)) scale(.85,.15) skew(-10deg,4deg);
+    opacity: 0;
+  }
+}
+
+/* Small splat after squash */
+.gif-splat{
+  position: fixed;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, rgba(120,60,20,.95) 0%, rgba(70,35,12,.9) 55%, rgba(0,0,0,0) 60%);
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,.35));
+  pointer-events: none;
+  z-index: 2147483646;
+}
