@@ -1,0 +1,8 @@
+App-ads.txt setup instructions
+Make sure you've created an app-ads.txt file using the spec provided by IAB Tech Lab.
+Copy and paste the following code snippet into your app-ads.txt file:
+google.com, pub-5691845019866762, DIRECT, f08c47fec0942fa0
+Publish your app-ads.txt on the root of your developer website (for example, sampledomain.com/app-ads.txt).
+Make sure the domain is entered exactly as listed on Google Play or the App Store.
+
+Crawl your app-ads.txt file to verify your app. We'll do a few checks to make sure the app-ads.txt is found and formatted correctly. This typically takes a few moments, but sometimes takes longer.
