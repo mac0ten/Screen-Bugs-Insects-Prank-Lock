@@ -4,84 +4,547 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Screen Bugs: Insects - The Ultimate Bug Simulator</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        /* --- CSS VARIABLES & RESET --- */
+        :root {
+            --bg-body: #050505;
+            --bg-card: rgba(20, 20, 22, 0.6);
+            --bg-card-hover: rgba(30, 30, 35, 0.8);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-main: #EEEEEE;
+            --text-muted: #888888;
+            --accent-glow: rgba(120, 119, 198, 0.3);
+            --primary-gradient: linear-gradient(180deg, #FFFFFF 0%, #AAAAAA 100%);
+            --button-gradient: linear-gradient(180deg, #2A2A2E 0%, #1A1A1E 100%);
+            --font-stack: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: var(--font-stack);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* --- THREE.JS BACKGROUND --- */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* --- BUG CONTAINER (DOM OVERLAY) --- */
+        #bug-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 50; /* Above background, below UI */
+            pointer-events: none; /* Let clicks pass through unless hitting a bug */
+            overflow: hidden;
+        }
+
+        .bug-element {
+            position: absolute;
+            will-change: transform;
+            pointer-events: auto; /* Allow squashing */
+            cursor: crosshair;
+            user-select: none;
+            /* Smooth rotation */
+            transition: opacity 0.3s;
+        }
+
+        /* --- LAYOUT UTILITIES --- */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            position: relative;
+            z-index: 100; /* UI sits on top */
+        }
+
+        /* --- HEADER --- */
+        .header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            height: 64px;
+            z-index: 200;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(5, 5, 5, 0.6);
+            display: flex;
+            align-items: center;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        .nav-brand {
+            font-weight: 600;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .nav-links a:hover {
+            color: #fff;
+        }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            padding-top: 180px;
+            padding-bottom: 120px;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 100px;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+            backdrop-filter: blur(4px);
+        }
+
+        .hero h1 {
+            font-size: 64px;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 24px;
+        }
+
+        .hero p {
+            font-size: 20px;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto 48px auto;
+            font-weight: 400;
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 48px;
+            padding: 0 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #fff;
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background: #e2e2e2;
+            transform: translateY(-1px);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* --- GENERIC SECTIONS --- */
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-header h2 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #fff;
+        }
+
+        .section-header p {
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+
+        /* --- FEATURES GRID --- */
+        .features {
+            padding: 100px 0;
+            border-top: 1px solid var(--border-color);
+            background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0) 100%);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 32px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            border-color: rgba(255,255,255,0.2);
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            font-size: 20px;
+        }
+
+        .card h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #fff;
+        }
+
+        .card p {
+            color: var(--text-muted);
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .card ul {
+            list-style: none;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        .card ul li {
+            margin-bottom: 8px;
+            padding-left: 16px;
+            position: relative;
+        }
+        .card ul li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #fff;
+        }
+
+        /* --- GALLERY SECTION --- */
+        .gallery {
+            padding: 100px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .gallery-item {
+            background: var(--bg-card);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        .gallery-placeholder {
+            height: 200px;
+            background: linear-gradient(135deg, #2A2A2E, #1A1A1E);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        .gallery-info {
+            padding: 24px;
+        }
+        .gallery-info h3 {
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+        .gallery-info p {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* --- PRIVACY SECTION --- */
+        .privacy {
+            padding: 100px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* --- DOWNLOAD/CTA SECTION --- */
+        .download-section {
+            padding: 100px 0;
+            border-top: 1px solid var(--border-color);
+            background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(255,255,255,0.03) 100%);
+            text-align: center;
+        }
+
+        .download-stats {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-bottom: 48px;
+            flex-wrap: wrap;
+        }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        .stat-item span {
+            color: #fff; /* Icon color */
+        }
+
+        /* --- FOOTER --- */
+        .footer {
+            border-top: 1px solid var(--border-color);
+            padding: 48px 0;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        .footer-links {
+            margin-bottom: 16px;
+        }
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            margin: 0 12px;
+            transition: color 0.2s;
+        }
+        .footer-links a:hover { color: #fff; }
+
+        /* --- CONTROLS OVERLAY --- */
+        .prank-controls {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            background: rgba(10, 10, 12, 0.8);
+            backdrop-filter: blur(16px);
+            padding: 24px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            width: 280px;
+            z-index: 300;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            transform: translateY(120%); /* Hidden by default */
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .prank-controls.active {
+            transform: translateY(0);
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .control-row {
+            margin-bottom: 16px;
+        }
+
+        .control-label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            background: transparent;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #fff;
+            margin-top: -6px;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .action-btn:hover {
+            background: rgba(255,255,255,0.15);
+        }
+
+        /* --- TOGGLE TRIGGER --- */
+        .toggle-trigger {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #fff;
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 301;
+            font-size: 20px;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .toggle-trigger:hover {
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 42px; }
+            .nav-links { display: none; }
+            .prank-controls { left: 20px; right: 20px; width: auto; bottom: 90px; }
+        }
+    </style>
 </head>
 <body>
-    <div id="overlay-root" aria-hidden="true"></div>
 
-    <main>
-        <!-- Header -->
-        <header class="header">
-            <nav class="nav">
-                <div class="nav-brand">
-                    <i class="fas fa-bug"></i>
-                    <span>Screen Bugs</span>
-                </div>
-                <ul class="nav-menu">
-                    <li><a href="#home" class="nav-link">Home</a></li>
-                    <li><a href="#features" class="nav-link">Features</a></li>
-                    <li><a href="#gallery" class="nav-link">Gallery</a></li>
-                    <li><a href="#privacy" class="nav-link">Privacy</a></li>
-                    <li><a href="#download" class="nav-link download-btn">Download</a></li>
-                </ul>
-                <div class="hamburger">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            </nav>
-        </header>
+    <!-- THREE.JS BACKGROUND LAYER -->
+    <div id="canvas-container"></div>
 
+    <!-- BUG OVERLAY LAYER -->
+    <div id="bug-container"></div>
+
+    <!-- MAIN UI CONTENT -->
+    <div class="header">
+        <nav class="nav">
+            <a href="#" class="nav-brand">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c0 3 .5 5 2 7 1.5 2 4 3 4 6 0 4-3 6-7 6-4 0-7-2-7-6 0-3 2.5-4 4-6 1.5-2 2-4 2-7"/></svg>
+                Screen Bugs
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#gallery">Gallery</a></li>
+                <li><a href="#privacy">Privacy</a></li>
+                <li><a href="#download">Download</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <div class="container">
         <!-- Hero Section -->
-        <section id="home" class="hero">
-            <div class="hero-content">
-                <div class="hero-text">
-                    <h1 class="hero-title">
-                        <span class="highlight">Screen Bugs:</span> Insects
-                    </h1>
-                    <p class="hero-subtitle">The Ultimate Bug Simulator & Prank App!</p>
-                    <p class="hero-description">
-                        Transform your device into a realistic insect habitat! Watch as lifelike bugs crawl,
-                        scurry, and flutter across your screen with stunning animations and authentic movement patterns.
-                    </p>
-                    <div class="hero-buttons">
-                        <a href="#download" class="btn btn-primary">
-                            <i class="fab fa-google-play"></i>
-                            Download Now
-                        </a>
-                        <a href="#features" class="btn btn-secondary">
-                            <i class="fas fa-play"></i>
-                            Watch Demo
-                        </a>
-                    </div>
-                    <div class="hero-stats">
-                        <div class="stat">
-                            <span class="stat-number">9</span>
-                            <span class="stat-label">Realistic Insects</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-number">100%</span>
-                            <span class="stat-label">Family Friendly</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-number">Free</span>
-                            <span class="stat-label">To Download</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="hero-visual">
-                    <div class="phone-mockup">
-                        <div class="phone-screen">
-                            <div class="gif-placeholder" id="hero-gif">
-                                <i class="fas fa-spider"></i>
-                                <p>Demo GIF #1</p>
-                                <span>Realistic bug animations</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <section class="hero">
+            <div class="hero-badge">The Ultimate Bug Simulator</div>
+            <h1>Screen Bugs: Insects</h1>
+            <p>Transform your device into a realistic insect habitat! Watch as lifelike bugs crawl, scurry, and flutter across your screen with stunning animations and authentic movement patterns.</p>
+            
+            <div class="btn-group">
+                <a href="#download" class="btn btn-primary" onclick="spawnExplosion()">Spawn Swarm</a>
+                <a href="#features" class="btn btn-secondary">Watch Demo</a>
             </div>
         </section>
 
@@ -92,89 +555,68 @@
                     <h2>Premium Features</h2>
                     <p>Everything you need for the perfect bug simulation experience</p>
                 </div>
-
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-bug"></i>
-                        </div>
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-icon">🕷️</div>
                         <h3>9 Realistic Insects</h3>
-                        <p>From spiders to ants, cockroaches to moths - each with unique behaviors and animations</p>
-                        <ul class="feature-list">
+                        <p>From spiders to ants, cockroaches to moths - each with unique behaviors.</p>
+                        <ul>
                             <li>Caterpillar - Peaceful muncher</li>
                             <li>Spider - Patient hunter</li>
                             <li>Ant - Hardworking crawler</li>
                             <li>Cockroach - Lightning-fast dasher</li>
                         </ul>
                     </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-gamepad"></i>
-                        </div>
+                    <div class="card">
+                        <div class="card-icon">🎮</div>
                         <h3>Interactive Gameplay</h3>
-                        <p>Tap to squash, spawn multiple bugs, and watch realistic physics in action</p>
-                        <ul class="feature-list">
+                        <p>Tap to squash, spawn multiple bugs, and watch realistic physics in action.</p>
+                        <ul>
                             <li>Tap to squash bugs</li>
                             <li>Spawn multiple bugs simultaneously</li>
                             <li>Realistic movement patterns</li>
                             <li>Authentic sound effects</li>
                         </ul>
                     </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-cog"></i>
-                        </div>
+                    <div class="card">
+                        <div class="card-icon">⚙️</div>
                         <h3>Customizable Settings</h3>
-                        <p>Adjust sizes, speeds, shadows, and choose which bugs appear on your screen</p>
-                        <ul class="feature-list">
+                        <p>Adjust sizes, speeds, shadows, and choose which bugs appear on your screen.</p>
+                        <ul>
                             <li>Adjust bug sizes</li>
                             <li>Control movement speed</li>
                             <li>Toggle shadow effects</li>
                             <li>Customize spawn behavior</li>
                         </ul>
                     </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-shield-alt"></i>
-                        </div>
-                        <h3>Child Lock & Parental Controls</h3>
-                        <p>Perfect for parents! Set PIN-protected schedules to manage screen time effectively</p>
-                        <ul class="feature-list">
+                    <div class="card">
+                        <div class="card-icon">🔒</div>
+                        <h3>Child Lock & Controls</h3>
+                        <p>Perfect for parents! Set PIN-protected schedules to manage screen time.</p>
+                        <ul>
                             <li>Lock device during specific hours</li>
-                            <li>Create multiple schedules</li>
                             <li>PIN-protected settings</li>
                             <li>Manage children's device time</li>
                         </ul>
                     </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-chart-bar"></i>
-                        </div>
+                    <div class="card">
+                        <div class="card-icon">📊</div>
                         <h3>Bug Counter & Dashboard</h3>
-                        <p>Track your active bugs with our intuitive counter and manage them individually</p>
-                        <ul class="feature-list">
+                        <p>Track your active bugs with our intuitive counter and manage them individually.</p>
+                        <ul>
                             <li>Real-time bug tracking</li>
-                            <li>Individual bug management</li>
                             <li>Clear all bugs at once</li>
                             <li>Spawn history tracking</li>
                         </ul>
                     </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-graduation-cap"></i>
-                        </div>
+                    <div class="card">
+                        <div class="card-icon">🎓</div>
                         <h3>Interactive Tutorial</h3>
-                        <p>First-time users get a complete guided tour with tooltips and helpful hints</p>
-                        <ul class="feature-list">
+                        <p>First-time users get a complete guided tour with tooltips and helpful hints.</p>
+                        <ul>
                             <li>Complete guided tour</li>
                             <li>Feature highlights</li>
                             <li>Helpful tooltips</li>
-                            <li>Never feel lost</li>
                         </ul>
                     </div>
                 </div>
@@ -188,69 +630,65 @@
                     <h2>Bug Gallery</h2>
                     <p>See our realistic insects in action</p>
                 </div>
-
-                <div class="gallery-grid">
+                <div class="grid">
                     <div class="gallery-item">
-                        <div class="gif-placeholder" id="gallery-gif-1">
-                            <i class="fas fa-spider"></i>
-                            <p>Demo GIF #2</p>
-                            <span>Spider crawling patterns</span>
+                        <div class="gallery-placeholder">
+                            <span>Demo GIF #1 (Spider)</span>
                         </div>
-                        <h3>Spider Simulator</h3>
-                        <p>Watch realistic 8-legged movement across your screen</p>
+                        <div class="gallery-info">
+                            <h3>Spider Simulator</h3>
+                            <p>Watch realistic 8-legged movement across your screen.</p>
+                        </div>
                     </div>
-
                     <div class="gallery-item">
-                        <div class="gif-placeholder" id="gallery-gif-2">
-                            <i class="fas fa-bug"></i>
-                            <p>Demo GIF #3</p>
-                            <span>Multiple bugs interaction</span>
+                        <div class="gallery-placeholder">
+                            <span>Demo GIF #2 (Multi-Bug)</span>
                         </div>
-                        <h3>Multi-Bug Chaos</h3>
-                        <p>Multiple insects with different behaviors and speeds</p>
+                        <div class="gallery-info">
+                            <h3>Multi-Bug Chaos</h3>
+                            <p>Multiple insects with different behaviors and speeds.</p>
+                        </div>
                     </div>
-
                     <div class="gallery-item">
-                        <div class="gif-placeholder">
-                            <i class="fas fa-fly"></i>
-                            <p>Coming Soon</p>
-                            <span>More animations</span>
+                        <div class="gallery-placeholder">
+                            <span>Coming Soon (Flight)</span>
                         </div>
-                        <h3>Flight Patterns</h3>
-                        <p>Flying insects with realistic flight behaviors</p>
+                        <div class="gallery-info">
+                            <h3>Flight Patterns</h3>
+                            <p>Flying insects with realistic flight behaviors.</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- Use Cases Section -->
-        <section class="use-cases">
+        <section class="features">
             <div class="container">
                 <div class="section-header">
                     <h2>Perfect For</h2>
                     <p>Endless entertainment possibilities</p>
                 </div>
-
-                <div class="use-cases-grid">
-                    <div class="use-case">
-                        <i class="fas fa-laugh"></i>
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-icon">🤣</div>
                         <h3>Pranking Friends</h3>
-                        <p>Ultimate prank app for April Fools' Day and breaking ice at parties</p>
+                        <p>Ultimate prank app for April Fools' Day and breaking ice at parties.</p>
                     </div>
-                    <div class="use-case">
-                        <i class="fas fa-child"></i>
+                    <div class="card">
+                        <div class="card-icon">👶</div>
                         <h3>Kid Entertainment</h3>
-                        <p>Safe, family-friendly fun with educational value about insects</p>
+                        <p>Safe, family-friendly fun with educational value about insects.</p>
                     </div>
-                    <div class="use-case">
-                        <i class="fas fa-leaf"></i>
+                    <div class="card">
+                        <div class="card-icon">🌿</div>
                         <h3>Nature Enthusiasts</h3>
-                        <p>Observe realistic insect behaviors up close without real bugs</p>
+                        <p>Observe realistic insect behaviors up close without real bugs.</p>
                     </div>
-                    <div class="use-case">
-                        <i class="fas fa-clock"></i>
-                        <h3>Screen Time Management</h3>
-                        <p>Parental controls to manage children's device usage effectively</p>
+                    <div class="card">
+                        <div class="card-icon">⏰</div>
+                        <h3>Screen Time</h3>
+                        <p>Parental controls to manage children's device usage effectively.</p>
                     </div>
                 </div>
             </div>
@@ -263,135 +701,421 @@
                     <h2>Privacy & Security</h2>
                     <p>Your privacy is our priority</p>
                 </div>
-
-                <div class="privacy-content">
-                    <div class="privacy-highlights">
-                        <div class="privacy-card">
-                            <i class="fas fa-shield-check"></i>
-                            <h3>Data Protection</h3>
-                            <p>All settings stored locally on your device. No personal data transmitted to external servers.</p>
-                        </div>
-                        <div class="privacy-card">
-                            <i class="fas fa-user-secret"></i>
-                            <h3>No Personal Info</h3>
-                            <p>We don't collect names, emails, location, photos, or any sensitive personal information.</p>
-                        </div>
-                        <div class="privacy-card">
-                            <i class="fas fa-lock"></i>
-                            <h3>Encrypted Storage</h3>
-                            <p>Child Lock PINs are encrypted using industry-standard security algorithms.</p>
-                        </div>
-                        <div class="privacy-card">
-                            <i class="fas fa-baby"></i>
-                            <h3>Child-Safe</h3>
-                            <p>COPPA compliant. No data collection from children under 13 years of age.</p>
-                        </div>
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Data Protection</h3>
+                        <p>All settings stored locally on your device. No personal data transmitted to external servers.</p>
                     </div>
-
-                    <div class="permissions-info">
-                        <h3>Required Permissions</h3>
-                        <div class="permission-item">
-                            <i class="fas fa-layer-group"></i>
-                            <div>
-                                <strong>Overlay Permission</strong>
-                                <p>Required to display bug animations over other applications</p>
-                            </div>
-                        </div>
-                        <div class="permission-item">
-                            <i class="fas fa-play"></i>
-                            <div>
-                                <strong>Autostart Permission</strong>
-                                <p>Optional permission for background features</p>
-                            </div>
-                        </div>
-                        <div class="permission-item">
-                            <i class="fas fa-save"></i>
-                            <div>
-                                <strong>Storage Access</strong>
-                                <p>Used to save your app settings and preferences locally</p>
-                            </div>
-                        </div>
+                    <div class="card">
+                        <h3>No Personal Info</h3>
+                        <p>We don't collect names, emails, location, photos, or any sensitive personal information.</p>
                     </div>
-
-                    <div class="privacy-actions">
-                        <a href="PRIVACY_POLICY.md" target="_blank" class="btn btn-outline">
-                            <i class="fas fa-file-alt"></i>
-                            Read Full Privacy Policy
-                        </a>
+                    <div class="card">
+                        <h3>Encrypted Storage</h3>
+                        <p>Child Lock PINs are encrypted using industry-standard security algorithms.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Child-Safe</h3>
+                        <p>COPPA compliant. No data collection from children under 13 years of age.</p>
                     </div>
                 </div>
-
             </div>
         </section>
 
         <!-- Download Section -->
-        <section id="download" class="download">
+        <section id="download" class="download-section">
             <div class="container">
-                <div class="download-content">
-                    <div class="download-text">
-                        <h2>Ready to Get Started?</h2>
-                        <p>Join thousands of users enjoying realistic bug simulations on their devices!</p>
-                        <div class="download-features">
-                            <div class="download-feature">
-                                <i class="fas fa-check"></i>
-                                <span>100% Free to Download</span>
-                            </div>
-                            <div class="download-feature">
-                                <i class="fas fa-check"></i>
-                                <span>No In-App Purchases</span>
-                            </div>
-                            <div class="download-feature">
-                                <i class="fas fa-check"></i>
-                                <span>Family-Friendly Content</span>
-                            </div>
-                            <div class="download-feature">
-                                <i class="fas fa-check"></i>
-                                <span>Regular Updates</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="download-buttons">
-                        <a href="#" class="download-btn google-play">
-                            <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play">
-                        </a>
-                        <div class="download-info">
-                            <p><strong>Version:</strong> 1.0.0</p>
-                            <p><strong>Size:</strong> ~15MB</p>
-                            <p><strong>Rating:</strong> Everyone</p>
-                            <p><strong>Category:</strong> Entertainment</p>
-                        </div>
-                    </div>
+                <div class="section-header">
+                    <h2>Ready to Get Started?</h2>
+                    <p>Join thousands of users enjoying realistic bug simulations on their devices!</p>
                 </div>
+                
+                <div class="download-stats">
+                    <div class="stat-item"><span>✓</span> 100% Free to Download</div>
+                    <div class="stat-item"><span>✓</span> No In-App Purchases</div>
+                    <div class="stat-item"><span>✓</span> Family-Friendly Content</div>
+                    <div class="stat-item"><span>✓</span> Regular Updates</div>
+                </div>
+
+                <div class="btn-group">
+                    <a href="#" class="btn btn-primary">Download for Android</a>
+                </div>
+                <p style="margin-top: 24px; color: var(--text-muted); font-size: 14px;">
+                    <strong>Version:</strong> 1.0.0 • <strong>Size:</strong> ~15MB • <strong>Rating:</strong> Everyone
+                </p>
             </div>
         </section>
 
         <!-- Footer -->
         <footer class="footer">
             <div class="container">
-                <div class="footer-content">
-                    <div class="footer-brand">
-                        <i class="fas fa-bug"></i>
-                        <span>Screen Bugs: Insects</span>
-                    </div>
-                    <div class="footer-links">
-                        <a href="PRIVACY_POLICY.md" target="_blank">Privacy Policy</a>
-                        <a href="#features">Features</a>
-                        <a href="#download">Download</a>
-                    </div>
-                    <div class="footer-social">
-                        <a href="#"><i class="fab fa-twitter"></i></a>
-                        <a href="#"><i class="fab fa-facebook"></i></a>
-                        <a href="#"><i class="fab fa-instagram"></i></a>
-                    </div>
+                <div class="footer-links">
+                    <a href="PRIVACY_POLICY.md" target="_blank">Privacy Policy</a>
+                    <a href="#features">Features</a>
+                    <a href="#download">Download</a>
                 </div>
-                <div class="footer-bottom">
-                    <p>&copy; 2024 Screen Bugs: Insects. All rights reserved. Made with ❤️ for insect enthusiasts worldwide!</p>
-                </div>
+                <p>&copy; 2024 Screen Bugs: Insects. All rights reserved. Made with ❤️ for insect enthusiasts worldwide!</p>
             </div>
         </footer>
+    </div>
 
-    </main>
+    <!-- CONTROLS -->
+    <div class="toggle-trigger" id="toggle-btn" onclick="toggleControls()">⚙️</div>
+    
+    <div class="prank-controls" id="controls-panel">
+        <div class="control-header">
+            <span>Simulation Settings</span>
+            <span style="cursor:pointer; opacity: 0.5" onclick="toggleControls()">✕</span>
+        </div>
+        
+        <div class="control-row">
+            <label class="control-label">Swarm Density</label>
+            <input type="range" id="density-slider" min="0" max="50" value="15">
+        </div>
 
-    <script src="script.js"></script>
+        <div class="control-row">
+            <label class="control-label">Agitation Speed</label>
+            <input type="range" id="speed-slider" min="1" max="12" value="5">
+        </div>
+
+        <button class="action-btn" onclick="resetSim()">Clear All</button>
+        <button class="action-btn" onclick="scareBugs()">Scare</button>
+    </div>
+
+    <script>
+        // --- UTILITY: Map Function ---
+        // Fixes the ReferenceError from previous version
+        function map(value, start1, stop1, start2, stop2) {
+            return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
+        }
+
+        // --- ASSETS CONFIGURATION ---
+        const bugTypes = [
+            { name: 'cockroach', src: 'cockroach.gif', scale: 1.2, speedMod: 1.5, offsetRot: 90 },
+            { name: 'moth', src: 'moth.gif', scale: 1.4, speedMod: 1.2, offsetRot: 90 },
+            { name: 'caterpillar', src: 'caterpillar.gif', scale: 1.0, speedMod: 0.6, offsetRot: 90 }
+        ];
+
+        // --- PHYSICS ENGINE (Three.js) + DOM RENDERING ---
+        // We keep Three.js for Vector calculations and the background, 
+        // but render bugs via DOM to support GIFs.
+        
+        const bugs = [];
+        const bugContainer = document.getElementById('bug-container');
+        
+        // Using Three.js Vector2 for all physics math
+        const mouse = new THREE.Vector2(9999, 9999);
+
+        class Bug {
+            constructor() {
+                // Pick random type
+                this.type = bugTypes[Math.floor(Math.random() * bugTypes.length)];
+                
+                // Create DOM Element
+                this.element = document.createElement('img');
+                this.element.src = this.type.src;
+                this.element.className = 'bug-element';
+                this.element.style.width = (40 * this.type.scale) + 'px';
+                this.element.style.height = 'auto';
+                
+                // Random start position
+                this.pos = new THREE.Vector2(
+                    Math.random() * window.innerWidth,
+                    Math.random() * window.innerHeight
+                );
+                
+                // Velocity
+                this.vel = new THREE.Vector2(
+                    (Math.random() - 0.5) * 4,
+                    (Math.random() - 0.5) * 4
+                );
+                
+                this.acc = new THREE.Vector2(0, 0);
+                this.maxSpeed = (3 + Math.random() * 2) * this.type.speedMod;
+                this.maxForce = 0.15;
+                this.wanderingTheta = Math.random() * Math.PI * 2;
+
+                // Click to squash
+                this.element.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent other clicks
+                    this.squash();
+                });
+
+                bugContainer.appendChild(this.element);
+            }
+
+            squash() {
+                this.isDead = true;
+                this.element.style.transition = 'transform 0.1s, opacity 0.5s';
+                this.element.style.transform += ' scale(1.5) rotate(180deg)'; // Splat effect
+                this.element.style.opacity = '0';
+                
+                // Remove from DOM after animation
+                setTimeout(() => {
+                    if(this.element.parentNode) {
+                        this.element.parentNode.removeChild(this.element);
+                    }
+                }, 500);
+            }
+
+            update() {
+                if(this.isDead) return;
+
+                this.behaviors();
+                
+                this.vel.add(this.acc);
+                this.vel.clampLength(0, this.maxSpeed);
+                this.pos.add(this.vel);
+                this.acc.set(0, 0); 
+                
+                this.edges();
+                this.render();
+            }
+
+            render() {
+                // Move the DOM element
+                const angle = Math.atan2(this.vel.y, this.vel.x) + (this.type.offsetRot * Math.PI / 180);
+                const transform = `translate3d(${this.pos.x}px, ${this.pos.y}px, 0) rotate(${angle}rad)`;
+                this.element.style.transform = transform;
+            }
+
+            applyForce(force) {
+                this.acc.add(force);
+            }
+
+            behaviors() {
+                // 1. Mouse interaction (Flee)
+                const d = this.pos.distanceTo(mouse);
+                if (d < 150) {
+                    const flee = this.seek(mouse).multiplyScalar(-2.5);
+                    this.applyForce(flee);
+                }
+
+                // 2. Wander (Random movement)
+                this.wander();
+
+                // 3. Separate (Don't stack too much)
+                this.separate();
+            }
+
+            seek(target) {
+                const desired = new THREE.Vector2().subVectors(target, this.pos);
+                desired.normalize().multiplyScalar(this.maxSpeed);
+                const steer = new THREE.Vector2().subVectors(desired, this.vel);
+                steer.clampLength(0, this.maxForce);
+                return steer;
+            }
+
+            wander() {
+                // Wander logic
+                const wanderR = 25;
+                const wanderD = 80;
+                const change = 0.3;
+                this.wanderingTheta += (Math.random() - 0.5) * change;
+
+                const circlePos = this.vel.clone().normalize().multiplyScalar(wanderD).add(this.pos);
+                const h = new THREE.Vector2(Math.cos(this.wanderingTheta), Math.sin(this.wanderingTheta)).multiplyScalar(wanderR);
+                const target = circlePos.add(h);
+                
+                const seekForce = this.seek(target);
+                this.applyForce(seekForce.multiplyScalar(0.5));
+            }
+
+            separate() {
+                let sum = new THREE.Vector2();
+                let count = 0;
+                const desiredSeparation = 40 * this.type.scale;
+
+                for(let other of bugs) {
+                    if(other === this || other.isDead) continue;
+                    const d = this.pos.distanceTo(other.pos);
+                    if(d > 0 && d < desiredSeparation) {
+                        const diff = new THREE.Vector2().subVectors(this.pos, other.pos);
+                        diff.normalize().divideScalar(d);
+                        sum.add(diff);
+                        count++;
+                    }
+                }
+
+                if(count > 0) {
+                    sum.divideScalar(count);
+                    sum.normalize().multiplyScalar(this.maxSpeed);
+                    const steer = new THREE.Vector2().subVectors(sum, this.vel);
+                    steer.clampLength(0, this.maxForce);
+                    this.applyForce(steer.multiplyScalar(1.5));
+                }
+            }
+
+            edges() {
+                // Wrap around screen
+                const buffer = 50;
+                if (this.pos.x > window.innerWidth + buffer) this.pos.x = -buffer;
+                else if (this.pos.x < -buffer) this.pos.x = window.innerWidth + buffer;
+                
+                if (this.pos.y > window.innerHeight + buffer) this.pos.y = -buffer;
+                else if (this.pos.y < -buffer) this.pos.y = window.innerHeight + buffer;
+            }
+        }
+
+        // --- THREE.JS BACKGROUND VISUALIZATION ---
+        // To satisfy the "Three.js" constraint visually
+        const canvasContainer = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        canvasContainer.appendChild(renderer.domElement);
+        camera.position.z = 50;
+
+        // Create network of particles
+        const particleCount = 60;
+        const particleGeo = new THREE.BufferGeometry();
+        const particlePos = new Float32Array(particleCount * 3);
+        const particleVel = [];
+
+        for(let i=0; i<particleCount; i++) {
+            particlePos[i*3] = (Math.random() - 0.5) * 100;
+            particlePos[i*3+1] = (Math.random() - 0.5) * 100;
+            particlePos[i*3+2] = (Math.random() - 0.5) * 50;
+            
+            particleVel.push({
+                x: (Math.random() - 0.5) * 0.05,
+                y: (Math.random() - 0.5) * 0.05
+            });
+        }
+        
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+        const particleMat = new THREE.PointsMaterial({ color: 0x444444, size: 0.5, transparent: true, opacity: 0.5 });
+        const particles = new THREE.Points(particleGeo, particleMat);
+        scene.add(particles);
+
+        // Lines between particles
+        const lineMat = new THREE.LineBasicMaterial({ color: 0x444444, transparent: true, opacity: 0.15 });
+        const linesGeo = new THREE.BufferGeometry();
+        const lines = new THREE.LineSegments(linesGeo, lineMat);
+        scene.add(lines);
+
+        function animateBackground() {
+            const positions = particles.geometry.attributes.position.array;
+            
+            // Update particles
+            for(let i=0; i<particleCount; i++) {
+                positions[i*3] += particleVel[i].x;
+                positions[i*3+1] += particleVel[i].y;
+
+                // Bounce
+                if(positions[i*3] > 60 || positions[i*3] < -60) particleVel[i].x *= -1;
+                if(positions[i*3+1] > 40 || positions[i*3+1] < -40) particleVel[i].y *= -1;
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
+
+            // Connect lines
+            const linePositions = [];
+            for(let i=0; i<particleCount; i++) {
+                for(let j=i+1; j<particleCount; j++) {
+                    const dx = positions[i*3] - positions[j*3];
+                    const dy = positions[i*3+1] - positions[j*3+1];
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+
+                    if(dist < 15) {
+                        linePositions.push(
+                            positions[i*3], positions[i*3+1], positions[i*3+2],
+                            positions[j*3], positions[j*3+1], positions[j*3+2]
+                        );
+                    }
+                }
+            }
+            lines.geometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+
+            renderer.render(scene, camera);
+        }
+
+        // --- MAIN LOOP ---
+        const initialCount = 15;
+        for(let i=0; i<initialCount; i++) {
+            bugs.push(new Bug());
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Update Physics & DOM
+            for(let i = bugs.length - 1; i >= 0; i--) {
+                const bug = bugs[i];
+                if(bug.isDead) {
+                    bugs.splice(i, 1);
+                } else {
+                    bug.update();
+                }
+            }
+
+            // Update Background
+            animateBackground();
+        }
+        animate();
+
+        // --- EVENTS ---
+        window.addEventListener('resize', () => {
+            // DOM resize handled by CSS/Update logic
+            
+            // Three.js resize
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            // For physics (screen coords)
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        // --- UI LOGIC ---
+        function toggleControls() {
+            document.getElementById('controls-panel').classList.toggle('active');
+        }
+
+        function spawnExplosion() {
+            for(let i=0; i<10; i++) {
+                bugs.push(new Bug());
+            }
+        }
+
+        function resetSim() {
+            for(let bug of bugs) {
+                if(bug.element.parentNode) bug.element.parentNode.removeChild(bug.element);
+            }
+            bugs.length = 0;
+        }
+
+        function scareBugs() {
+            bugs.forEach(bug => {
+                bug.vel.multiplyScalar(5);
+            });
+        }
+
+        // Sliders
+        const densitySlider = document.getElementById('density-slider');
+        densitySlider.addEventListener('input', (e) => {
+            const target = parseInt(e.target.value);
+            
+            if(bugs.length < target) {
+                while(bugs.length < target) bugs.push(new Bug());
+            } else if (bugs.length > target) {
+                while(bugs.length > target) {
+                    const b = bugs.pop();
+                    if(b.element.parentNode) b.element.parentNode.removeChild(b.element);
+                }
+            }
+        });
+
+        const speedSlider = document.getElementById('speed-slider');
+        speedSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            bugs.forEach(b => b.maxSpeed = val * b.type.speedMod);
+        });
+
+    </script>
 </body>
 </html>
